@@ -1,0 +1,181 @@
+name: lagoon
+qualifier: dev2
+ekara:
+  distribution:
+    repository: ""
+    ref: ""
+  components:
+    distrib:
+      repository: https://github.com/blablabla
+      ref: my-addon
+      auth:
+        method: basic
+        password: mypassword
+        user: myuwer
+    helios:
+      repository: dummy/openstack-provider
+      ref: fix-modules
+    prometheus:
+      repository: dummy/stack-prometheus
+      ref: init-stack
+    swarm:
+      repository: dummy/swarm-orchestrator
+      ref: 1.0.0-beta1
+    visualizer:
+      repository: dummy/swarm-visualizer
+      ref: 1.0.0-beta1
+tasks:
+  testhook_post:
+    component: distrib
+    params:
+      param_in_task: value_in_task
+      tower_password: mytowerpassword
+      tower_user: mytoweruser
+    playbook: post-create.yml
+  testhook_pre:
+    component: distrib
+    playbook: pre-create.yml
+orchestrator:
+  component: swarm
+  docker:
+    params:
+      disable-legacy-registry: true
+      hosts:
+      - unix:///var/run/docker.sock
+      - tcp://0.0.0.0:2376
+      live-restore: false
+      log-driver: json-file
+      log-opts:
+        max-file: "3"
+        max-size: 20m
+      registry-mirrors:
+      - https://repository.dummy.com/
+      tls: true
+      tlscacert: /etc/docker/certs/ca.pem
+      tlscert: /etc/docker/certs/cert.pem
+      tlskey: /etc/docker/certs/key.pem
+      tlsverify: true
+      userland-proxy: true
+    registries:
+      mysuperdomain.com:
+        certificate: http://dummy.com/blablabla.crt
+        password: yasAnotherPassword
+        username: AndItsRelatedUser
+providers:
+  helios:
+    component: dummy
+    params:
+      cacert:
+      - http://dummy.com/blablabla.crt/Racine.crt
+      - http://dummy.com/blablabla.crt/Programs.crt
+      config:
+        auth:
+          auth_url: https://mycloud.com:5000/v3/
+          password: cloudpassword
+          project_domain_name: Default
+          user_domain_name: ldap
+          username: cloudUser
+        identity_api_version: 3
+    proxy:
+      http_proxy: http://mysuperdomain.com:80
+      https_proxy: http://mysuperdomain.com:80
+      no_proxy: '[NODES_IPS],.mysuperdomain.com'
+nodes:
+  nodeset1:
+    instances: 2
+    provider:
+      name: helios
+      params:
+        dns_zone: dev.lagoon
+        flavor: docker.medium
+        image: Ubuntu_16.04
+        prefix_names: noreflex
+        private_network: mynetwork_net_dev
+        public_network: L3OUT_Intranet_Safety
+        security_groups:
+        - group1_sg_dev
+        - group_sg_wallix
+        user_data: "#cloud-config    \nchpasswd:\n  list: |\n    ubuntu:user\n
+          \   root:root\n  expire: False\nsystem_info:\n  default_user:\n
+          \   name: ubuntu\n    plain_text_passwd: 'user'\n    home: /home/ubuntu\n
+          \   shell: /bin/bash\n    lock_passwd: false\n    sudo: ALL=(ALL) NOPASSWD:ALL\n"
+        zone: intranet
+      proxy:
+        http_proxy: http://mysuperdomain.com:80
+        https_proxy: http://mysuperdomain.com:80
+    orchestrator: {}
+    volumes:
+    - path: /users
+      params:
+        volume_size: 50
+        volume_type: CEPH-1000
+    - path: /var/lib/docker
+      params:
+        volume_size: 100
+        volume_type: CEPH-1000
+    hooks:
+      provision:
+        before:
+        - task: testhook_pre
+        after:
+        - task: testhook_post
+          params:
+            param_in_hook: value_in_hook
+            tower_password: password
+            tower_user: user
+stacks:
+  prometheus:
+    component: prometheus
+    params:
+      alertmanager:
+        conf:
+          global:
+            resolve_timeout: 3m
+          receivers:
+          - name: sdi
+            webhook_configs:
+            - url: http://mysuperdomain/alert/sdi/rest/alertmanager
+          route:
+            receiver: sdi
+            repeat_interval: 4h
+      grafana:
+        ldap:
+          servers:
+          - bind_dn: cn=user,ou=programs,o=mysuperdomain
+            bind_password: password
+            group_search_base_dns:
+            - o=mysuperdomain
+            group_search_filter: (&(objectClass=group)(|(uniquemember=cn=%s,ou=programs,
+              o=mysuperdomain)(uniquemember=cn=%s,ou=users, o=domain)))
+            host: annuaire.mysuperdomain.com
+            port: 123
+            search_base_dns:
+            - o=mysuperdomain
+            search_filter: (uid=%s)
+            ssl_skip_verify: false
+            start_tls: false
+            use_ssl: false
+          servers_attributes:
+            email: mail
+            member_of: cn
+            name: givenName
+            surname: user
+            username: name
+          servers_group_mappings:
+          - group_dn: LAG.GROUP.ADMIN
+            org_role: Admin
+          - group_dn: MY_GROUP
+            org_role: Editor
+  visualizer:
+    component: visualizer
+volumes:
+  volume_name1:
+    content:
+    - component: visualizer
+      path: /modules/docker_swarm_service.py
+    - component: helios
+      path: /templates/heats/
+  volume_name2:
+    content:
+    - component: helios
+      path: /templates/heats/heat-stack.yaml
