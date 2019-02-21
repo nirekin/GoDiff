@@ -63,9 +63,27 @@ The generated `diff` can also be dumped into the console
 
 This is an example of the console dump poduced by the test `TestDumpNeruda`
 
+The schown dump is the result of the comparison of [/testdata/v1.txt](./testdata/v1.txt) with [/testdata/v2.txt](./testdata/v2.txt)	and finally with [/testdata/v3.txt](./testdata/v3.txt)
+
+
+```go
+	f1, _ := readFile("./testdata/v1.txt")
+	f2, _ := readFile("./testdata/v2.txt")
+	f3, _ := readFile("./testdata/v3.txt")
+
+	origin := IniDoc(f1, "v1.txt")
+	diff, _ := ProcessDiff(origin, f2, "v2.txt")
+	diff, _ = ProcessDiff(diff, f3, "v3.txt")
+	diff.dumpOut()
+
+```
+
+Dump on the console :
+
 ![neruda dump](./img/neruda.PNG)
 
-	
+
+
 
 
 
