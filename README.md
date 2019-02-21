@@ -1,6 +1,6 @@
 # GoDiff
 
-Simple tools to track changes ( modification and insertion ) between to versions of a content.
+Simple tool to track changes ( modification and insertion ) between to versions of a content.
 
 
 ## Usage
