@@ -142,13 +142,16 @@ func merge(cLine chan ResolvedLine, exit chan bool, origin ResolvedDoc, update [
 						// The original line has been located further
 						// It's an insertion
 						cLine <- ResolvedLine{update[0], updatePath}
-
+						// the first line of the update has been processed as an insert
+						// then it will be removed, the origin stays unchanged
 						merge(cLine, exit, origin, update[1:], updatePath)
 					} else {
 						// The original line has not been located further
 						// It's a replacement
 						cLine <- ResolvedLine{update[0], updatePath}
-
+						// the first line of the update has been processed as a replacement
+						// then it will be removed, the replaced line of the origin will
+						// also be removed
 						merge(cLine, exit, origin[1:], update[1:], updatePath)
 					}
 				}
